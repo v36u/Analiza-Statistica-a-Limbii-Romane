@@ -81,9 +81,6 @@ const auto LATIME_TOTAL = setw(1 + TEXT_TOTAL.length());
 
 wifstream g_fisier;
 
-constexpr char CALE_CATRE_RAPOARTE[] = "rapoarte/\0";
-constexpr char EXTENSIE_RAPORT[] = "txt\0";
-
 /**
  * @param p_set_de_date Numele setului de date
  * @returns Calea relativă către setul de date
@@ -95,20 +92,6 @@ GetCaleCatreSetDeDate(const char* p_set_de_date)
     cale.append(p_set_de_date);
     cale.append(1, '.');
     cale.append(EXTENSIE_SETURI_DE_DATE);
-    return cale;
-}
-
-/**
- * @param p_set_de_date Numele setului de date
- * @returns Calea relativă către raport
- */
-string
-GetCaleCatreRaport(const char* p_set_de_date)
-{
-    auto cale = string(CALE_CATRE_RAPOARTE);
-    cale.append(p_set_de_date);
-    cale.append(1, '.');
-    cale.append(EXTENSIE_RAPORT);
     return cale;
 }
 
