@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 #pragma execution_character_set( "utf-8" )
 
@@ -21,6 +22,7 @@ using std::getline;
 
 using std::wstring;
 using std::wifstream;
+using std::vector;
 
 const wstring CALE_CATRE_SETURI_DE_DATE = L"seturi_de_date/";
 const wstring SETURI_DE_DATE[] = {
@@ -61,7 +63,7 @@ const wstring CARACTERE_PERMISE = {
     L'Y', L'y',
     L'Z', L'z',
 };
-constexpr int NUMAR_CARACTERE_PERMISE = 62;
+const int NUMAR_CARACTERE_PERMISE = CARACTERE_PERMISE.length();
 
 const locale UTF8(locale::empty(), new codecvt_utf8<wchar_t>);
 
@@ -93,12 +95,12 @@ GetCaleCatreSetDeDate(const wstring& p_set_de_date)
  * @returns Numărul total de caractere permise în raport cu tabloul furnizat
  */
 int
-GetNumarTotalCaracterePermise(const int* p_frecvente)
+GetNumarTotalCaracterePermise(const vector<int>& p_frecvente)
 {
     int numar_total = 0;
-    for (int index = 0; index < NUMAR_CARACTERE_PERMISE; index++)
+    for (const auto& frecventa : p_frecvente)
     {
-        numar_total += p_frecvente[index];
+        numar_total += frecventa;
     }
     return numar_total;
 }
@@ -119,13 +121,14 @@ GetNumarCifre(int p_numar)
     return numar_cifre;
 }
 
+
 /**
  * Afișarea în consolă a rezultatelor procesării setului de date curent
  * @param p_frecvente Tabloul de secvențe
  * @param p_set_de_date Numele setului de date - pentru afișare
  */
 void
-AfisareRezultate(const int* p_frecvente, const wstring& p_set_de_date)
+AfisareRezultate(const vector<int>& p_frecvente, const wstring& p_set_de_date)
 {
     wcout << L"\n\n" << SEPARATOR_SETURI_DE_DATE;
 
@@ -175,7 +178,7 @@ AfisareRezultate(const int* p_frecvente, const wstring& p_set_de_date)
 void
 ProcesareSetDeDate(const wstring& p_set_de_date)
 {
-    int frecvente[NUMAR_CARACTERE_PERMISE] = {0};
+    vector<int> frecvente(NUMAR_CARACTERE_PERMISE, 0);
 
     wstring linie;
     while (getline(g_fisier, linie))
