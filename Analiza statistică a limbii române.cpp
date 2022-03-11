@@ -12,29 +12,23 @@
 using std::locale;
 using std::codecvt_utf8;
 
-using std::ios;
 using std::wcout;
 using std::setw;
 using std::setprecision;
 using std::fixed;
 
-using std::string;
 using std::getline;
-using std::size;
 
 using std::wstring;
 using std::wifstream;
-using std::wofstream;
 
-constexpr int LUNGIME_MAXIMA_STRING = 1024;
-
-constexpr char CALE_CATRE_SETURI_DE_DATE[] = "seturi_de_date/\0";
-constexpr char SETURI_DE_DATE[][LUNGIME_MAXIMA_STRING] = {
-    "ethereum_whitepaper\0", "ion_volumul_i\0", "ion_volumul_ii\0"
+const wstring CALE_CATRE_SETURI_DE_DATE = L"seturi_de_date/";
+const wstring SETURI_DE_DATE[] = {
+    L"ethereum_whitepaper", L"ion_volumul_i", L"ion_volumul_ii"
 };
-constexpr char EXTENSIE_SETURI_DE_DATE[] = "txt\0";
+const wstring EXTENSIE_SETURI_DE_DATE = L"txt";
 
-constexpr wchar_t CARACTERE_PERMISE[] = {
+const wstring CARACTERE_PERMISE = {
     L'A', L'a',
     L'Ă', L'ă',
     L'Â', L'â',
@@ -67,8 +61,7 @@ constexpr wchar_t CARACTERE_PERMISE[] = {
     L'Y', L'y',
     L'Z', L'z',
 };
-constexpr int NUMAR_CARACTERE_PERMISE = size(CARACTERE_PERMISE);
-constexpr int NEGASIT = -1;
+constexpr int NUMAR_CARACTERE_PERMISE = 62;
 
 const locale UTF8(locale::empty(), new codecvt_utf8<wchar_t>);
 
@@ -85,10 +78,10 @@ wifstream g_fisier;
  * @param p_set_de_date Numele setului de date
  * @returns Calea relativă către setul de date
  */
-string
-GetCaleCatreSetDeDate(const char* p_set_de_date)
+wstring
+GetCaleCatreSetDeDate(const wstring& p_set_de_date)
 {
-    auto cale = string(CALE_CATRE_SETURI_DE_DATE);
+    auto cale = wstring(CALE_CATRE_SETURI_DE_DATE);
     cale.append(p_set_de_date);
     cale.append(1, '.');
     cale.append(EXTENSIE_SETURI_DE_DATE);
@@ -127,29 +120,12 @@ GetNumarCifre(int p_numar)
 }
 
 /**
- * @param p_caracter Caracterul căutat
- * @returns Indexul caracterului căutat în tabloul cu caractere permise
- */
-int
-GetIndexCaracterPermis(const wchar_t& p_caracter)
-{
-    for (int index = 0; index < NUMAR_CARACTERE_PERMISE; index++)
-    {
-        if (CARACTERE_PERMISE[index] == p_caracter)
-        {
-            return index;
-        }
-    }
-    return NEGASIT;
-}
-
-/**
  * Afișarea în consolă a rezultatelor procesării setului de date curent
  * @param p_frecvente Tabloul de secvențe
  * @param p_set_de_date Numele setului de date - pentru afișare
  */
 void
-AfisareRezultate(const int* p_frecvente, const char* p_set_de_date)
+AfisareRezultate(const int* p_frecvente, const wstring& p_set_de_date)
 {
     wcout << L"\n\n" << SEPARATOR_SETURI_DE_DATE;
 
@@ -160,7 +136,7 @@ AfisareRezultate(const int* p_frecvente, const char* p_set_de_date)
     long double progres = 0;
 
     // Această buclă este safe deoarece știu că am un număr par de chei în Tablou
-    for (int index = 0; index < NUMAR_CARACTERE_PERMISE; index += 2)
+    for (auto index = 0; index < NUMAR_CARACTERE_PERMISE; index += 2)
     {
         const auto flaguri_originale = wcout.flags();
 
@@ -197,17 +173,17 @@ AfisareRezultate(const int* p_frecvente, const char* p_set_de_date)
  * @param p_set_de_date Numele setului de date - pentru afișare
  */
 void
-ProcesareSetDeDate(const char* p_set_de_date)
+ProcesareSetDeDate(const wstring& p_set_de_date)
 {
     int frecvente[NUMAR_CARACTERE_PERMISE] = {0};
 
     wstring linie;
     while (getline(g_fisier, linie))
     {
-        for (const auto caracter : linie)
+        for (const auto& caracter : linie)
         {
-            const auto index_caracter = GetIndexCaracterPermis(caracter);
-            if (index_caracter == NEGASIT)
+            const auto index_caracter = CARACTERE_PERMISE.find(caracter);
+            if (index_caracter == wstring::npos)
             {
                 // Caracterul nu este permis
                 continue;
@@ -231,7 +207,7 @@ main(void)
         g_fisier.imbue(UTF8);
 
         ProcesareSetDeDate(set_de_date);
-        
+
         g_fisier.close();
     }
 
