@@ -10,7 +10,7 @@
 #include <queue>
 #include <cmath>
 
-#pragma execution_character_set( "utf-8" )
+#pragma execution_character_set("utf-8")
 
 using std::locale;
 using std::codecvt_utf8;
@@ -126,7 +126,7 @@ struct ComparatorHuffman
      * p_nod_1 trebuie să fie după p_nod_2
      */
     bool
-        operator()(NodHuffman p_nod_1, NodHuffman p_nod_2) const
+    operator()(NodHuffman p_nod_1, NodHuffman p_nod_2) const
     {
         return p_nod_1->frecventa > p_nod_2->frecventa;
     }
@@ -155,12 +155,13 @@ struct ComparatorPerecheCaracterCodHuffman
      * p_pereche_1 trebuie să fie după p_pereche_2
      */
     bool
-        operator()(const PerecheCaracterCodHuffman& p_pereche_1, const PerecheCaracterCodHuffman& p_pereche_2) const
+    operator()(const PerecheCaracterCodHuffman& p_pereche_1, const PerecheCaracterCodHuffman& p_pereche_2) const
     {
         const auto pozitia_caracterului_din_prima_pereche = CARACTERE_PERMISE.find(p_pereche_1.caracter);
         const auto pozitia_caracterului_din_a_doua_pereche = CARACTERE_PERMISE.find(p_pereche_2.caracter);
 
-        if (pozitia_caracterului_din_prima_pereche == wstring::npos || pozitia_caracterului_din_a_doua_pereche == wstring::npos)
+        if (pozitia_caracterului_din_prima_pereche == wstring::npos || pozitia_caracterului_din_a_doua_pereche ==
+            wstring::npos)
         {
             throw logic_error("Unul dintre caractere nu se află printre caracterele permise!");
         }
@@ -169,7 +170,8 @@ struct ComparatorPerecheCaracterCodHuffman
     }
 };
 
-typedef priority_queue<PerecheCaracterCodHuffman, vector<PerecheCaracterCodHuffman>, ComparatorPerecheCaracterCodHuffman> CoadaPerecheHuffman;
+typedef priority_queue<PerecheCaracterCodHuffman, vector<PerecheCaracterCodHuffman>,
+                       ComparatorPerecheCaracterCodHuffman> CoadaPerecheHuffman;
 
 /**
  * @param p_set_de_date Numele setului de date
@@ -220,7 +222,7 @@ GetCoadaCoduriHuffman(NodHuffman p_varf, const wstring& p_cod)
     CoadaPerecheHuffman coada_dreapta = GetCoadaCoduriHuffman(p_varf->dreapta, p_cod + L'1');
     if (p_varf->caracter != CARACTER_NOD_INTERMEDIAR)
     {
-        coada_finala.push({ p_varf->caracter, p_cod });
+        coada_finala.push({p_varf->caracter, p_cod});
     }
 
     // Nu contează ordinea în care le inserăm datorită faptului că e priority queue și am stabilit ordinea în comparator
@@ -263,7 +265,7 @@ GetTablouCoduriHuffman(CoadaPerecheHuffman p_coada)
  * @returns Un tablou cu codurile Huffman aferente caracterelor (CASE INSENSITIVE)
  */
 vector<wstring>
-GetCoduriHuffman(const vector<size_t>& p_frecvente, long double & p_numar_caractere)
+GetCoduriHuffman(const vector<size_t>& p_frecvente, long double& p_numar_caractere)
 {
     NodHuffman varf = nullptr;
 
@@ -274,7 +276,7 @@ GetCoduriHuffman(const vector<size_t>& p_frecvente, long double & p_numar_caract
         heap.push(new CelulaHuffman(CARACTERE_PERMISE[index], p_frecvente[index] + p_frecvente[index + 1]));
     }
 
-    while (heap.size() != 1)
+    while (heap.size() > 1)
     {
         NodHuffman stanga = heap.top();
         heap.pop();
@@ -290,7 +292,7 @@ GetCoduriHuffman(const vector<size_t>& p_frecvente, long double & p_numar_caract
 
     p_numar_caractere = static_cast<long double>(varf->frecventa);
     const auto coada = GetCoadaCoduriHuffman(varf, L"");
-    
+
     delete varf;
 
     return GetTablouCoduriHuffman(coada);
@@ -314,7 +316,7 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
 
     auto progres = 0.0L;
     auto entropie = 0.0L;
-        
+
     for (size_t index = 0; index < NUMAR_CARACTERE_PERMISE; index += 2)
     {
         const auto flaguri_originale = wcout.flags();
