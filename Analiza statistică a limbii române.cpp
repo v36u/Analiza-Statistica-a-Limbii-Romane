@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <queue>
+#include <cmath>
 
 #pragma execution_character_set( "utf-8" )
 
@@ -23,14 +25,20 @@ using std::getline;
 using std::wstring;
 using std::wifstream;
 using std::vector;
+using std::priority_queue;
 
-const wstring CALE_CATRE_SETURI_DE_DATE = L"seturi_de_date/";
-const wstring SETURI_DE_DATE[] = {
-    L"ethereum_whitepaper", L"ion_volumul_i", L"ion_volumul_ii"
+using std::logic_error;
+using std::log;
+
+const auto CALE_CATRE_SETURI_DE_DATE = wstring(L"seturi_de_date/");
+const auto SETURI_DE_DATE = {
+    wstring(L"ethereum_whitepaper"),
+    wstring(L"ion_volumul_i"),
+    wstring(L"ion_volumul_ii")
 };
-const wstring EXTENSIE_SETURI_DE_DATE = L"txt";
+const auto EXTENSIE_SETURI_DE_DATE = wstring(L"txt");
 
-const wstring CARACTERE_PERMISE = {
+const auto CARACTERE_PERMISE = wstring({
     L'A', L'a',
     L'Ă', L'ă',
     L'Â', L'â',
@@ -62,8 +70,8 @@ const wstring CARACTERE_PERMISE = {
     L'X', L'x',
     L'Y', L'y',
     L'Z', L'z',
-};
-const int NUMAR_CARACTERE_PERMISE = CARACTERE_PERMISE.length();
+});
+const size_t NUMAR_CARACTERE_PERMISE = CARACTERE_PERMISE.length();
 
 const locale UTF8(locale::empty(), new codecvt_utf8<wchar_t>);
 
@@ -71,10 +79,97 @@ const auto PRECIZIE = setprecision(21);
 const auto SEPARATOR_SETURI_DE_DATE = wstring(100, L'=');
 const auto SEPARATOR_LITERE = wstring(70, L'-');
 
-const wstring TEXT_TOTAL = L"***       Total -> ";
+const auto TEXT_TOTAL = wstring(L"***       Total -> ");
 const auto LATIME_TOTAL = setw(1 + TEXT_TOTAL.length());
 
 wifstream g_fisier;
+
+const auto CARACTER_NOD_INTERMEDIAR = L'#';
+
+/**
+ * Structură pentru a conține datele din nodurile arborelui de coduri Huffmanw
+ */
+struct CelulaHuffman
+{
+    wchar_t caracter;
+    size_t frecventa;
+    CelulaHuffman* stanga;
+    CelulaHuffman* dreapta;
+
+    CelulaHuffman(const wchar_t& p_caracter,
+                  const size_t& p_frecventa)
+        : caracter(p_caracter),
+          frecventa(p_frecventa),
+          stanga(nullptr),
+          dreapta(nullptr)
+    {
+    }
+
+    ~CelulaHuffman()
+    {
+        delete stanga;
+        delete dreapta;
+    }
+};
+
+typedef CelulaHuffman* NodHuffman;
+
+/**
+ * Structură comparator (mai formal se numește predicat binar) care se folosește pentru <see cref="https://www.cplusplus.com/reference/queue/priority_queue/">priority queue</see>
+ */
+struct ComparatorHuffman
+{
+    /**
+     * @param p_nod_1 Primul nod (generic)
+     * @param p_nod_2 Al doilea nod (generic)
+     * @returns Un boolean care dacă este "true" înseamnă că p_nod_1 trebuie să fie înaintea lui p_nod_2, iar dacă este fals,
+     * p_nod_1 trebuie să fie după p_nod_2
+     */
+    bool
+        operator()(NodHuffman p_nod_1, NodHuffman p_nod_2) const
+    {
+        return p_nod_1->frecventa > p_nod_2->frecventa;
+    }
+};
+
+typedef priority_queue<NodHuffman, vector<NodHuffman>, ComparatorHuffman> HuffmanHeap;
+
+/**
+ * Structură auxiliară folosită pentru a menține ordinea codurilor Huffman
+ */
+struct PerecheCaracterCodHuffman
+{
+    wchar_t caracter;
+    wstring cod_huffman;
+};
+
+/**
+ * Structură comparator (mai formal se numește predicat binar) care se folosește pentru <see cref="https://www.cplusplus.com/reference/queue/priority_queue/">priority queue</see>
+ */
+struct ComparatorPerecheCaracterCodHuffman
+{
+    /**
+     * @param p_pereche_1 Prima pereche (generică)
+     * @param p_pereche_2 A doua pereche (generică)
+     * @returns Un boolean care dacă este "true" înseamnă că p_pereche_1 trebuie să fie înaintea lui p_pereche_2, iar dacă este fals,
+     * p_pereche_1 trebuie să fie după p_pereche_2
+     */
+    bool
+        operator()(const PerecheCaracterCodHuffman& p_pereche_1, const PerecheCaracterCodHuffman& p_pereche_2) const
+    {
+        const auto pozitia_caracterului_din_prima_pereche = CARACTERE_PERMISE.find(p_pereche_1.caracter);
+        const auto pozitia_caracterului_din_a_doua_pereche = CARACTERE_PERMISE.find(p_pereche_2.caracter);
+
+        if (pozitia_caracterului_din_prima_pereche == wstring::npos || pozitia_caracterului_din_a_doua_pereche == wstring::npos)
+        {
+            throw logic_error("Unul dintre caractere nu se află printre caracterele permise!");
+        }
+
+        return pozitia_caracterului_din_prima_pereche > pozitia_caracterului_din_a_doua_pereche;
+    }
+};
+
+typedef priority_queue<PerecheCaracterCodHuffman, vector<PerecheCaracterCodHuffman>, ComparatorPerecheCaracterCodHuffman> CoadaPerecheHuffman;
 
 /**
  * @param p_set_de_date Numele setului de date
@@ -91,28 +186,13 @@ GetCaleCatreSetDeDate(const wstring& p_set_de_date)
 }
 
 /**
- * @param p_frecvente Tabloul de secvențe
- * @returns Numărul total de caractere permise în raport cu tabloul furnizat
- */
-int
-GetNumarTotalCaracterePermise(const vector<int>& p_frecvente)
-{
-    int numar_total = 0;
-    for (const auto& frecventa : p_frecvente)
-    {
-        numar_total += frecventa;
-    }
-    return numar_total;
-}
-
-/**
  * @param p_numar Numarul pentru care se dorește aflarea numărului de cifre
  * @returns Număul de cifre ale numărului furnizat
  */
-int
-GetNumarCifre(int p_numar)
+size_t
+GetNumarCifre(size_t p_numar)
 {
-    int numar_cifre = 0;
+    size_t numar_cifre = 0;
     while (p_numar)
     {
         numar_cifre++;
@@ -121,6 +201,100 @@ GetNumarCifre(int p_numar)
     return numar_cifre;
 }
 
+/**
+ * @param p_varf Adresa vârfului heap-ului procesat
+ * @param p_cod Codul curent (parametru folosit la recursivitate)
+ * @returns Un priority list de pair-uri de tip (caracter, cod) - pentru a menține ordinea (CASE INSENSITIVE)
+ */
+CoadaPerecheHuffman
+GetCoadaCoduriHuffman(NodHuffman p_varf, const wstring& p_cod)
+{
+    if (p_varf == nullptr)
+    {
+        return {};
+    }
+
+    CoadaPerecheHuffman coada_finala;
+
+    CoadaPerecheHuffman coada_stanga = GetCoadaCoduriHuffman(p_varf->stanga, p_cod + L'0');
+    CoadaPerecheHuffman coada_dreapta = GetCoadaCoduriHuffman(p_varf->dreapta, p_cod + L'1');
+    if (p_varf->caracter != CARACTER_NOD_INTERMEDIAR)
+    {
+        coada_finala.push({ p_varf->caracter, p_cod });
+    }
+
+    // Nu contează ordinea în care le inserăm datorită faptului că e priority queue și am stabilit ordinea în comparator
+    while (!coada_stanga.empty())
+    {
+        coada_finala.push(coada_stanga.top());
+        coada_stanga.pop();
+    }
+
+    while (!coada_dreapta.empty())
+    {
+        coada_finala.push(coada_dreapta.top());
+        coada_dreapta.pop();
+    }
+
+    return coada_finala;
+}
+
+/**
+ * Crează un tablou în funcție de priority queue. Fac acest lucru deoarece este redundant să mai avem și caracterele când deja le știm ordinea
+ * - ele au fost folosite doar în scopul menținerii ordinii.
+ * @param p_coada Priority queue procesat
+ * @returns Un tablou de string-uri care reprezintă codurile Huffman în ordine
+ */
+vector<wstring>
+GetTablouCoduriHuffman(CoadaPerecheHuffman p_coada)
+{
+    vector<wstring> ret;
+    while (!p_coada.empty())
+    {
+        ret.push_back(p_coada.top().cod_huffman);
+        p_coada.pop();
+    }
+    return ret;
+}
+
+/**
+ * @param p_frecvente Tabloul de frecvențe ale caracterelor
+ * @param p_numar_caractere Parametru prin referință pentru a elimina redundanța în calcularea numărului total de caractere deoarce știm că acesta este vârful heap-ului Huffman
+ * @returns Un tablou cu codurile Huffman aferente caracterelor (CASE INSENSITIVE)
+ */
+vector<wstring>
+GetCoduriHuffman(const vector<size_t>& p_frecvente, long double & p_numar_caractere)
+{
+    NodHuffman varf = nullptr;
+
+    HuffmanHeap heap;
+
+    for (size_t index = 0; index < p_frecvente.size(); index += 2)
+    {
+        heap.push(new CelulaHuffman(CARACTERE_PERMISE[index], p_frecvente[index] + p_frecvente[index + 1]));
+    }
+
+    while (heap.size() != 1)
+    {
+        NodHuffman stanga = heap.top();
+        heap.pop();
+
+        NodHuffman dreapta = heap.top();
+        heap.pop();
+
+        varf = new CelulaHuffman(CARACTER_NOD_INTERMEDIAR, stanga->frecventa + dreapta->frecventa);
+        varf->stanga = stanga;
+        varf->dreapta = dreapta;
+        heap.push(varf);
+    }
+
+    p_numar_caractere = static_cast<long double>(varf->frecventa);
+    const auto coada = GetCoadaCoduriHuffman(varf, L"");
+    
+    delete varf;
+
+    return GetTablouCoduriHuffman(coada);
+}
 
 /**
  * Afișarea în consolă a rezultatelor procesării setului de date curent
@@ -128,18 +302,20 @@ GetNumarCifre(int p_numar)
  * @param p_set_de_date Numele setului de date - pentru afișare
  */
 void
-AfisareRezultate(const vector<int>& p_frecvente, const wstring& p_set_de_date)
+AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date)
 {
-    wcout << L"\n\n" << SEPARATOR_SETURI_DE_DATE;
+    auto numar_caractere = 0.0L;
+    const auto coduri_huffman = GetCoduriHuffman(p_frecvente, numar_caractere);
 
-    const auto numar_caractere = GetNumarTotalCaracterePermise(p_frecvente);
+    wcout << SEPARATOR_SETURI_DE_DATE;
+
     wcout << L"\n\nFrecvențele celor " << numar_caractere <<
         L" de caractere ale alfabetului românesc din setul de date \"" << p_set_de_date << L"\":\n";
 
-    long double progres = 0;
-
-    // Această buclă este safe deoarece știu că am un număr par de chei în Tablou
-    for (auto index = 0; index < NUMAR_CARACTERE_PERMISE; index += 2)
+    auto progres = 0.0L;
+    auto entropie = 0.0L;
+        
+    for (size_t index = 0; index < NUMAR_CARACTERE_PERMISE; index += 2)
     {
         const auto flaguri_originale = wcout.flags();
 
@@ -159,16 +335,23 @@ AfisareRezultate(const vector<int>& p_frecvente, const wstring& p_set_de_date)
             L" - Probabilitate: " << fixed << PRECIZIE << probabilitate_lowercase;
         wcout << L"\n\n" << TEXT_TOTAL << CARACTERE_PERMISE[index] << ": " << total << L" - Probabilitate: " << fixed <<
             PRECIZIE << probabilitate_total;
-        wcout << L"\n\n*** Cod Huffman -> 0110101010";
+        wcout << L"\n\n*** Cod Huffman -> " << coduri_huffman[index / 2];
 
         wcout << L"\n" << SEPARATOR_LITERE << L"\n\n";
 
         wcout.flags(flaguri_originale);
 
         wcout << L"+++++ Progres: " << PRECIZIE << progres << L" / 1 +++++\n";
+
+        if (probabilitate_total > 0.0L)
+        {
+            entropie += probabilitate_total * log(1 / probabilitate_total);
+        }
     }
 
     wcout << L"\n" << SEPARATOR_SETURI_DE_DATE << L"\n\n";
+
+    wcout << L"Entropia (biti/caracter): " << entropie << L"\n\n";
 }
 
 /**
@@ -178,7 +361,7 @@ AfisareRezultate(const vector<int>& p_frecvente, const wstring& p_set_de_date)
 void
 ProcesareSetDeDate(const wstring& p_set_de_date)
 {
-    vector<int> frecvente(NUMAR_CARACTERE_PERMISE, 0);
+    vector<size_t> frecvente(NUMAR_CARACTERE_PERMISE, 0);
 
     wstring linie;
     while (getline(g_fisier, linie))
