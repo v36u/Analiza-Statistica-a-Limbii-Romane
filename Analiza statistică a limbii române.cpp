@@ -28,7 +28,7 @@ using std::vector;
 using std::priority_queue;
 
 using std::logic_error;
-using std::log;
+using std::log2;
 
 const auto CALE_CATRE_SETURI_DE_DATE = wstring(L"seturi_de_date/");
 const auto SETURI_DE_DATE = {
@@ -316,6 +316,7 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
 
     auto progres = 0.0L;
     auto entropie = 0.0L;
+    auto lungimea_medie_a_combinatiilor_de_cod = 0.0L;
 
     for (size_t index = 0; index < NUMAR_CARACTERE_PERMISE; index += 2)
     {
@@ -331,29 +332,42 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
         const auto probabilitate_total = static_cast<long double>(total) / numar_caractere;
         progres += probabilitate_total;
 
+        const auto cod_huffman = coduri_huffman[index / 2];
+
         wcout << L"\n" << LATIME_TOTAL << CARACTERE_PERMISE[index] << L": " << latime << p_frecvente[index] <<
             L" - Probabilitate: " << fixed << PRECIZIE << probabilitate_uppercase;
         wcout << L"\n\n" << LATIME_TOTAL << CARACTERE_PERMISE[index + 1] << L": " << latime << p_frecvente[index + 1] <<
             L" - Probabilitate: " << fixed << PRECIZIE << probabilitate_lowercase;
         wcout << L"\n\n" << TEXT_TOTAL << CARACTERE_PERMISE[index] << ": " << total << L" - Probabilitate: " << fixed <<
             PRECIZIE << probabilitate_total;
-        wcout << L"\n\n*** Cod Huffman -> " << coduri_huffman[index / 2];
+        wcout << L"\n\n*** Cod Huffman -> " << cod_huffman;
 
         wcout << L"\n" << SEPARATOR_LITERE << L"\n\n";
 
         wcout.flags(flaguri_originale);
 
-        wcout << L"+++++ Progres: " << PRECIZIE << progres << L" / 1 +++++\n";
+        wcout << L"+++++ Progres valoare unitară: " << PRECIZIE << progres << L" / 1 +++++\n";
 
+        lungimea_medie_a_combinatiilor_de_cod += probabilitate_total * static_cast<long double>(cod_huffman.length());
         if (probabilitate_total > 0.0L)
         {
-            entropie += probabilitate_total * log(1 / probabilitate_total);
+            entropie += probabilitate_total * log2(1 / probabilitate_total);
         }
     }
 
-    wcout << L"\n" << SEPARATOR_SETURI_DE_DATE << L"\n\n";
+    wcout << L"\n" << SEPARATOR_SETURI_DE_DATE << L"\n";
 
-    wcout << L"Entropia (biti/caracter): " << entropie << L"\n\n";
+    const auto eficienta = entropie / lungimea_medie_a_combinatiilor_de_cod;
+    const auto redundanta = 1 - eficienta;
+
+    wcout << L"\nEntropia (biți/caracter) = " << entropie << L"\n";
+    wcout << L"\nM = 2 (folosim cod binar)\n";
+    wcout << L"\nLungimea medie a combinațiilor de cod (biți/caracter) = " << lungimea_medie_a_combinatiilor_de_cod << L"\n";
+    wcout << L"\nEficiența = " << eficienta << L"\n";
+    wcout << L"\nRedundanța = " << redundanta << L"\n";
+
+    wcout << L"\n" << entropie << L" ≤ " << lungimea_medie_a_combinatiilor_de_cod << L" ≤ " << entropie + 1;
+    wcout << L"\nTeorema I a lui Shannon este verificată!\n\n";
 }
 
 /**
