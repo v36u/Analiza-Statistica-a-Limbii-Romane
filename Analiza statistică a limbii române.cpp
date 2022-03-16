@@ -33,8 +33,7 @@ using std::log2;
 const auto CALE_CATRE_SETURI_DE_DATE = wstring(L"seturi_de_date/");
 const auto SETURI_DE_DATE = {
     wstring(L"ethereum_whitepaper"),
-    wstring(L"ion_volumul_i"),
-    wstring(L"ion_volumul_ii")
+    wstring(L"amintiri_din_copilarie")
 };
 const auto EXTENSIE_SETURI_DE_DATE = wstring(L"txt");
 
