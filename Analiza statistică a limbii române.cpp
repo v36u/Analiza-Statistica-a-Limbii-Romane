@@ -16,6 +16,7 @@ using std::locale;
 using std::codecvt_utf8;
 
 using std::wcout;
+using std::wcin;
 using std::setw;
 using std::setprecision;
 using std::fixed;
@@ -36,6 +37,7 @@ const auto SETURI_DE_DATE = {
     wstring(L"amintiri_din_copilarie")
 };
 const auto EXTENSIE_SETURI_DE_DATE = wstring(L"txt");
+const auto NUMAR_SETURI_DE_DATE = SETURI_DE_DATE.size();
 
 const auto CARACTERE_PERMISE = wstring({
     L'A', L'a',
@@ -288,6 +290,10 @@ GetCoduriHuffman(const vector<size_t>& p_frecvente, long double& p_numar_caracte
         varf->dreapta = dreapta;
         heap.push(varf);
     }
+    if (varf == nullptr)
+    {
+        throw logic_error("Arborele Huffman nu a putut fi creat!");
+    }
 
     p_numar_caractere = static_cast<long double>(varf->frecventa);
     const auto coada = GetCoadaCoduriHuffman(varf, L"");
@@ -402,15 +408,40 @@ main(void)
     SetConsoleOutputCP(65001);
     _setmode(_fileno(stdout), _O_U16TEXT);
 
-    for (const auto& set_de_date : SETURI_DE_DATE)
-    {
-        g_fisier.open(GetCaleCatreSetDeDate(set_de_date));
+    size_t optiune;
+    while(true){
+        wcout << L"\nOpțiuni disponibile: ";
+        wcout << L"\n\t0. Încetare execuție";
+        for (size_t index_set = 0; index_set < NUMAR_SETURI_DE_DATE; index_set++)
+        {
+            wcout << L"\n\t" << index_set + 1 << L". " << *(SETURI_DE_DATE.begin() + index_set);
+        }
+        wcout << L"\nOpțiunea aleasă: "; 
+        wcin >> optiune;
+
+        if (optiune == 0) {
+            break;
+        }
+
+        if (optiune > NUMAR_SETURI_DE_DATE)
+        {
+            continue;
+        }
+
+        const auto set_de_date = SETURI_DE_DATE.begin() + optiune - 1;
+
+        g_fisier.open(GetCaleCatreSetDeDate(*set_de_date));
         g_fisier.imbue(UTF8);
 
-        ProcesareSetDeDate(set_de_date);
+        ProcesareSetDeDate(*set_de_date);
 
         g_fisier.close();
     }
+
+    // Ca să fie ceva mai clean la finalul execuției
+    wcout << '\n';
+    wcin.ignore();
+    wcin.get();
 
     return EXIT_SUCCESS;
 }
