@@ -9,6 +9,8 @@
 #include <vector>
 #include <queue>
 #include <cmath>
+#include <cwctype>
+#include <algorithm>
 
 #pragma execution_character_set("utf-8")
 
@@ -27,9 +29,12 @@ using std::wstring;
 using std::wifstream;
 using std::vector;
 using std::priority_queue;
+using std::find;
 
 using std::logic_error;
 using std::log2;
+
+using std::towupper;
 
 const auto CALE_CATRE_SETURI_DE_DATE = wstring(L"seturi_de_date/");
 const auto SETURI_DE_DATE = {
@@ -86,6 +91,11 @@ const auto LATIME_TOTAL = setw(1 + TEXT_TOTAL.length());
 wifstream g_fisier;
 
 const auto CARACTER_NOD_INTERMEDIAR = L'#';
+
+// Nu este cache la propriu, ci doar o simulare de cache în memorie
+vector<wstring> g_coduri_huffman_cached; 
+vector<size_t> g_frecvente_cached;
+size_t g_numar_caractere_cached;
 
 /**
  * Structură pentru a conține datele din nodurile arborelui de coduri Huffmanw
@@ -266,8 +276,14 @@ GetTablouCoduriHuffman(CoadaPerecheHuffman p_coada)
  * @returns Un tablou cu codurile Huffman aferente caracterelor (CASE INSENSITIVE)
  */
 vector<wstring>
-GetCoduriHuffman(const vector<size_t>& p_frecvente, long double& p_numar_caractere)
+GetCoduriHuffman(const vector<size_t>& p_frecvente, size_t& p_numar_caractere)
 {
+    if (!g_coduri_huffman_cached.empty() && g_numar_caractere_cached > 0)
+    {
+        p_numar_caractere = g_numar_caractere_cached;
+        return g_coduri_huffman_cached;
+    }
+
     NodHuffman varf = nullptr;
 
     HuffmanHeap heap;
@@ -295,12 +311,13 @@ GetCoduriHuffman(const vector<size_t>& p_frecvente, long double& p_numar_caracte
         throw logic_error("Arborele Huffman nu a putut fi creat!");
     }
 
-    p_numar_caractere = static_cast<long double>(varf->frecventa);
+    g_numar_caractere_cached = p_numar_caractere = varf->frecventa;
     const auto coada = GetCoadaCoduriHuffman(varf, L"");
-
     delete varf;
 
-    return GetTablouCoduriHuffman(coada);
+    g_coduri_huffman_cached = GetTablouCoduriHuffman(coada);
+
+    return g_coduri_huffman_cached;
 }
 
 /**
@@ -311,10 +328,10 @@ GetCoduriHuffman(const vector<size_t>& p_frecvente, long double& p_numar_caracte
 void
 AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date)
 {
-    auto numar_caractere = 0.0L;
+    size_t numar_caractere = 0;
     const auto coduri_huffman = GetCoduriHuffman(p_frecvente, numar_caractere);
 
-    wcout << SEPARATOR_SETURI_DE_DATE;
+    wcout << '\n' << SEPARATOR_SETURI_DE_DATE;
 
     wcout << L"\n\nFrecvențele celor " << numar_caractere <<
         L" de caractere ale alfabetului românesc din setul de date \"" << p_set_de_date << L"\":\n";
@@ -332,9 +349,9 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
         const auto total = p_frecvente[index] + p_frecvente[index + 1];
         const auto latime = setw(GetNumarCifre(total));
 
-        const auto probabilitate_uppercase = static_cast<long double>(p_frecvente[index]) / numar_caractere;
-        const auto probabilitate_lowercase = static_cast<long double>(p_frecvente[index + 1]) / numar_caractere;
-        const auto probabilitate_total = static_cast<long double>(total) / numar_caractere;
+        const auto probabilitate_uppercase = static_cast<long double>(p_frecvente[index]) / static_cast<long double>(numar_caractere);
+        const auto probabilitate_lowercase = static_cast<long double>(p_frecvente[index + 1]) / static_cast<long double>(numar_caractere);
+        const auto probabilitate_total = static_cast<long double>(total) / static_cast<long double>(numar_caractere);
         progres += probabilitate_total;
 
         const auto cod_huffman = coduri_huffman[index / 2];
@@ -367,7 +384,8 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
 
     wcout << L"\nEntropia (biți/caracter) = " << entropie << L"\n";
     wcout << L"\nM = 2 (folosim cod binar)\n";
-    wcout << L"\nLungimea medie a combinațiilor de cod (biți/caracter) = " << lungimea_medie_a_combinatiilor_de_cod << L"\n";
+    wcout << L"\nLungimea medie a combinațiilor de cod (biți/caracter) = " << lungimea_medie_a_combinatiilor_de_cod <<
+        L"\n";
     wcout << L"\nEficiența = " << eficienta << L"\n";
     wcout << L"\nRedundanța = " << redundanta << L"\n";
 
@@ -375,13 +393,17 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
     wcout << L"\nTeorema I a lui Shannon este verificată!\n\n";
 }
 
-/**
- * Bucla principală a programului care procesează setul de date curent
- * @param p_set_de_date Numele setului de date - pentru afișare
+/*
+ * Returnează un tablou cu frecvențele caracterelor
  */
-void
-ProcesareSetDeDate(const wstring& p_set_de_date)
+vector<size_t>
+GetFrecvente()
 {
+    if (!g_frecvente_cached.empty())
+    {
+        return g_frecvente_cached;
+    }
+
     vector<size_t> frecvente(NUMAR_CARACTERE_PERMISE, 0);
 
     wstring linie;
@@ -399,7 +421,127 @@ ProcesareSetDeDate(const wstring& p_set_de_date)
         }
     }
 
+    g_frecvente_cached = frecvente;
+
+    return frecvente;
+}
+
+/**
+ * Bucla principală a programului care procesează setul de date curent
+ * @param p_set_de_date Numele setului de date - pentru afișare
+ */
+void
+ProcesareSetDeDate(const wstring& p_set_de_date)
+{
+    auto frecvente = GetFrecvente();
     AfisareRezultate(frecvente, p_set_de_date);
+}
+
+/*
+ * @returns Poziția codului huffman căutat sau npos dacă nu există
+ */
+size_t
+GetPozitieCodHuffman(const vector<wstring>& p_coduri_huffman, const wstring& p_cod_cautat)
+{
+    for (size_t index = 0; index < p_coduri_huffman.size(); index++)
+    {
+        if (p_coduri_huffman[index] == p_cod_cautat)
+        {
+            return index;
+        }
+    }
+    return wstring::npos;
+}
+
+wstring
+ConvertireStringLaUppercase(const wstring& p_string)
+{
+    auto ret = wstring();
+
+    for (auto caracter : p_string)
+    {
+        ret += static_cast<wchar_t>(towupper(caracter));
+    }
+
+    return ret;
+}
+
+/**
+ * Citire și criptare mesaj folosind setul de date selectat
+ */
+void
+CriptareMesaj()
+{
+    wstring mesaj;
+    wcout << L"\nIntroduceți mesajul care trebuie criptat: ";
+
+    wcin.ignore();
+    getline(wcin, mesaj);
+
+    mesaj = ConvertireStringLaUppercase(mesaj);
+
+    auto frecvente = GetFrecvente();
+    size_t numar_caractere = 0;
+    const auto coduri_huffman = GetCoduriHuffman(frecvente, numar_caractere);
+
+    wcout << L"Mesajul criptat: ";
+    for (auto caracter : mesaj)
+    {
+        auto pozitie_caracter = CARACTERE_PERMISE.find(caracter);
+        if (pozitie_caracter == wstring::npos)
+        {
+            wcout << ' ';
+        }
+        else
+        {
+            wcout << coduri_huffman[pozitie_caracter / 2];
+        }
+    }
+
+    wcout << L'\n';
+}
+
+/**
+ * Citire și decriptare mesaj folosind setul de date selectat
+ */
+void
+DeriptareMesaj()
+{
+    wstring mesaj;
+    wcout << L"\nIntroduceți mesajul care trebuie decriptat: ";
+    wcin >> mesaj;
+
+    auto frecvente = GetFrecvente();
+    size_t numar_caractere = 0;
+    const auto coduri_huffman = GetCoduriHuffman(frecvente, numar_caractere);
+
+    wcout << L"Mesajul decriptat: ";
+
+    size_t pozitie_start = 0;
+    auto mesaj_decriptat = wstring();
+    for (size_t index = pozitie_start; index < mesaj.length(); index++)
+    {
+        auto substring_curent = mesaj.substr(pozitie_start, index - pozitie_start + 1);
+        auto pozitie_cod_huffman = GetPozitieCodHuffman(coduri_huffman, substring_curent);
+        if (pozitie_cod_huffman != wstring::npos)
+        {
+            pozitie_start = index + 1;
+            mesaj_decriptat += CARACTERE_PERMISE[pozitie_cod_huffman * 2];
+        }
+    }
+
+    wcout << mesaj_decriptat << L'\n';
+}
+
+/*
+ * Resetează variabilele globale cache-uite
+ */
+void
+GolesteCache()
+{
+    g_coduri_huffman_cached.clear();
+    g_frecvente_cached.clear();
+    g_numar_caractere_cached = 0;
 }
 
 int
@@ -408,38 +550,77 @@ main(void)
     SetConsoleOutputCP(65001);
     _setmode(_fileno(stdout), _O_U16TEXT);
 
-    size_t optiune;
-    while(true){
+    size_t optiune_exterioara = 0;
+    while (true)
+    {
         wcout << L"\nOpțiuni disponibile: ";
-        wcout << L"\n\t0. Încetare execuție";
+        wcout << L"\n\t0. Ieșire";
         for (size_t index_set = 0; index_set < NUMAR_SETURI_DE_DATE; index_set++)
         {
-            wcout << L"\n\t" << index_set + 1 << L". " << *(SETURI_DE_DATE.begin() + index_set);
+            wcout << L"\n\t" << index_set + 1 << L". Selectare set de date \"" << *(SETURI_DE_DATE.begin() + index_set)
+                << L'\"';
         }
-        wcout << L"\nOpțiunea aleasă: "; 
-        wcin >> optiune;
+        wcout << L"\nOpțiunea aleasă: ";
+        wcin >> optiune_exterioara;
 
-        if (optiune == 0) {
+        if (optiune_exterioara == 0)
+        {
             break;
         }
 
-        if (optiune > NUMAR_SETURI_DE_DATE)
+        if (optiune_exterioara > NUMAR_SETURI_DE_DATE)
         {
             continue;
         }
 
-        const auto set_de_date = SETURI_DE_DATE.begin() + optiune - 1;
+        GolesteCache();
+
+        const auto set_de_date = SETURI_DE_DATE.begin() + optiune_exterioara - 1;
 
         g_fisier.open(GetCaleCatreSetDeDate(*set_de_date));
         g_fisier.imbue(UTF8);
 
-        ProcesareSetDeDate(*set_de_date);
+        size_t optiune_interioara = 0;
+        do
+        {
+            wcout << L"\nOpțiuni disponibile: ";
+            wcout << L"\n\t0. Înapoi la selectarea setului de date";
+            wcout << L"\n\t1. Afișare statistici \"" << *set_de_date << L'\"';
+            wcout << L"\n\t2. Criptare text";
+            wcout << L"\n\t3. Decriptare text";
+            wcout << L"\nOpțiunea aleasă: ";
+            wcin >> optiune_interioara;
+
+            switch (optiune_interioara)
+            {
+            case 1:
+                {
+                    ProcesareSetDeDate(*set_de_date);
+                }
+                break;
+            case 2:
+                {
+                    CriptareMesaj();
+                }
+                break;
+            case 3:
+                {
+                    DeriptareMesaj();
+                }
+                break;
+            default:
+                {
+                    // Reia bucla
+                }
+            }
+        }
+        while (optiune_interioara);
 
         g_fisier.close();
     }
 
     // Ca să fie ceva mai clean la finalul execuției
-    wcout << '\n';
+    wcout << "\nLa revedere!\n";
     wcin.ignore();
     wcin.get();
 
