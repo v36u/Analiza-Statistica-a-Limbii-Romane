@@ -10,7 +10,6 @@
 #include <queue>
 #include <cmath>
 #include <cwctype>
-#include <algorithm>
 
 #pragma execution_character_set("utf-8")
 
@@ -29,7 +28,6 @@ using std::wstring;
 using std::wifstream;
 using std::vector;
 using std::priority_queue;
-using std::find;
 
 using std::logic_error;
 using std::log2;
@@ -79,6 +77,8 @@ const auto CARACTERE_PERMISE = wstring({
 });
 const size_t NUMAR_CARACTERE_PERMISE = CARACTERE_PERMISE.length();
 
+const auto CARACTERE_PERMISE_DECRIPTARE = wstring({'0', '1'});
+
 const locale UTF8(locale::empty(), new codecvt_utf8<wchar_t>);
 
 const auto PRECIZIE = setprecision(21);
@@ -93,7 +93,7 @@ wifstream g_fisier;
 const auto CARACTER_NOD_INTERMEDIAR = L'#';
 
 // Nu este cache la propriu, ci doar o simulare de cache în memorie
-vector<wstring> g_coduri_huffman_cached; 
+vector<wstring> g_coduri_huffman_cached;
 vector<size_t> g_frecvente_cached;
 size_t g_numar_caractere_cached;
 
@@ -349,8 +349,10 @@ AfisareRezultate(const vector<size_t>& p_frecvente, const wstring& p_set_de_date
         const auto total = p_frecvente[index] + p_frecvente[index + 1];
         const auto latime = setw(GetNumarCifre(total));
 
-        const auto probabilitate_uppercase = static_cast<long double>(p_frecvente[index]) / static_cast<long double>(numar_caractere);
-        const auto probabilitate_lowercase = static_cast<long double>(p_frecvente[index + 1]) / static_cast<long double>(numar_caractere);
+        const auto probabilitate_uppercase = static_cast<long double>(p_frecvente[index]) / static_cast<long double>(
+            numar_caractere);
+        const auto probabilitate_lowercase = static_cast<long double>(p_frecvente[index + 1]) / static_cast<long double>
+            (numar_caractere);
         const auto probabilitate_total = static_cast<long double>(total) / static_cast<long double>(numar_caractere);
         progres += probabilitate_total;
 
@@ -484,20 +486,24 @@ CriptareMesaj()
     size_t numar_caractere = 0;
     const auto coduri_huffman = GetCoduriHuffman(frecvente, numar_caractere);
 
-    wcout << L"Mesajul criptat: ";
+    auto mesaj_criptat = wstring();
+    auto mesaj_criptat_crud = wstring();
     for (auto caracter : mesaj)
     {
         auto pozitie_caracter = CARACTERE_PERMISE.find(caracter);
         if (pozitie_caracter == wstring::npos)
         {
-            wcout << ' ';
+            mesaj_criptat += ' ';
         }
         else
         {
-            wcout << coduri_huffman[pozitie_caracter / 2];
+            mesaj_criptat += coduri_huffman[pozitie_caracter / 2];
+            mesaj_criptat_crud += coduri_huffman[pozitie_caracter / 2];
         }
     }
 
+    wcout << L"\nMesajul criptat: " << mesaj_criptat;
+    wcout << L"\nMesajul criptat crud: " << mesaj_criptat_crud;
     wcout << L'\n';
 }
 
@@ -509,35 +515,60 @@ DeriptareMesaj()
 {
     wstring mesaj;
     wcout << L"\nIntroduceți mesajul care trebuie decriptat: ";
-    wcin >> mesaj;
+
+    wcin.ignore();
+    getline(wcin, mesaj);
 
     auto frecvente = GetFrecvente();
     size_t numar_caractere = 0;
     const auto coduri_huffman = GetCoduriHuffman(frecvente, numar_caractere);
 
-    wcout << L"Mesajul decriptat: ";
-
-    size_t pozitie_start = 0;
     auto mesaj_decriptat = wstring();
-    for (size_t index = pozitie_start; index < mesaj.length(); index++)
+    auto mesaj_decriptat_crud = wstring();
+    auto substring_curent = wstring();
+    for (size_t index = 0, pozitie_start = 0; index < mesaj.length(); index++)
     {
-        auto substring_curent = mesaj.substr(pozitie_start, index - pozitie_start + 1);
+        substring_curent = mesaj.substr(pozitie_start, index - pozitie_start + 1);
+        if (CARACTERE_PERMISE_DECRIPTARE.find(mesaj[index]) == wstring::npos)
+        {
+            substring_curent = substring_curent.substr(0, substring_curent.length() - 1);
+            if (substring_curent.length())
+            {
+                mesaj_decriptat += L"(" + substring_curent + L") ";
+            }
+            mesaj_decriptat += L' ';
+            pozitie_start = index + 1;
+            continue;
+        }
+
         auto pozitie_cod_huffman = GetPozitieCodHuffman(coduri_huffman, substring_curent);
         if (pozitie_cod_huffman != wstring::npos)
         {
+            auto caracter_curent = CARACTERE_PERMISE[pozitie_cod_huffman * 2];
+            mesaj_decriptat += caracter_curent;
+            mesaj_decriptat_crud += caracter_curent;
+
+            substring_curent = wstring();
             pozitie_start = index + 1;
-            mesaj_decriptat += CARACTERE_PERMISE[pozitie_cod_huffman * 2];
         }
     }
 
-    wcout << mesaj_decriptat << L'\n';
+    substring_curent = substring_curent.substr(0, substring_curent.length() - 1);
+    if (substring_curent.length())
+    {
+        mesaj_decriptat += L"(" + substring_curent + L") ";
+    }
+
+    wcout << L"\nMesajul decriptat: " << mesaj_decriptat;
+    wcout << L"\nMesajul decriptat (crud): " << mesaj_decriptat_crud;
+    wcout << L'\n';
 }
 
 /*
  * Resetează variabilele globale cache-uite
  */
 void
-GolesteCache()
+GolireCache()
 {
     g_coduri_huffman_cached.clear();
     g_frecvente_cached.clear();
@@ -548,7 +579,9 @@ int
 main(void)
 {
     SetConsoleOutputCP(65001);
-    _setmode(_fileno(stdout), _O_U16TEXT);
+
+    // Cast explicit către void pentru a ignora valoarea returnată (și totodată un warning enervant)
+    static_cast<void>(_setmode(_fileno(stdout), _O_U16TEXT));
 
     size_t optiune_exterioara = 0;
     while (true)
@@ -573,7 +606,7 @@ main(void)
             continue;
         }
 
-        GolesteCache();
+        GolireCache();
 
         const auto set_de_date = SETURI_DE_DATE.begin() + optiune_exterioara - 1;
 
