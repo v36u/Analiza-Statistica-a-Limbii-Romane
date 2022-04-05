@@ -37,7 +37,10 @@ using std::towupper;
 const auto CALE_CATRE_SETURI_DE_DATE = wstring(L"seturi_de_date/");
 const auto SETURI_DE_DATE = {
     wstring(L"ethereum_whitepaper"),
-    wstring(L"amintiri_din_copilarie")
+    wstring(L"amintiri_din_copilarie"),
+    wstring(L"constitutia_romaniei_2003"),
+    wstring(L"tratatul_privind_uniunea_europeana"),
+    wstring(L"viata_la_tara")
 };
 const auto EXTENSIE_SETURI_DE_DATE = wstring(L"txt");
 const auto NUMAR_SETURI_DE_DATE = SETURI_DE_DATE.size();
