@@ -465,7 +465,30 @@ ConvertireStringLaUppercase(const wstring& p_string)
 
     for (auto caracter : p_string)
     {
-        ret += static_cast<wchar_t>(towupper(caracter));
+        if (caracter == L'ă' || caracter == L'Ă')
+        {
+            ret += L"Ă";
+        }
+        else if (caracter == L'â' || caracter == L'Â')
+        {
+            ret += L"Â";
+        }
+        else if (caracter == L'î' || caracter == L'Î')
+        {
+            ret += L"Î";
+        }
+        else if (caracter == L'ș' || caracter == L'Ș')
+        {
+            ret += L"Ș";
+        }
+        else if (caracter == L'ț' || caracter == L'Ț')
+        {
+            ret += L"Ț";
+        }
+        else
+        {
+            ret += static_cast<wchar_t>(towupper(caracter));
+        }
     }
 
     return ret;
@@ -478,7 +501,7 @@ void
 CriptareMesaj()
 {
     wstring mesaj;
-    wcout << L"\nIntroduceți mesajul care trebuie criptat: ";
+    wcout << L"\nIntroduceți mesajul care trebuie codificat: ";
 
     wcin.ignore();
     getline(wcin, mesaj);
@@ -505,8 +528,8 @@ CriptareMesaj()
         }
     }
 
-    wcout << L"\nMesajul criptat: " << mesaj_criptat;
-    wcout << L"\nMesajul criptat crud: " << mesaj_criptat_crud;
+    wcout << L"\nMesajul codificat: " << mesaj_criptat;
+    wcout << L"\nMesajul codificat crud: " << mesaj_criptat_crud;
     wcout << L'\n';
 }
 
@@ -517,7 +540,7 @@ void
 DeriptareMesaj()
 {
     wstring mesaj;
-    wcout << L"\nIntroduceți mesajul care trebuie decriptat: ";
+    wcout << L"\nIntroduceți mesajul care trebuie decodificat: ";
 
     wcin.ignore();
     getline(wcin, mesaj);
@@ -562,8 +585,8 @@ DeriptareMesaj()
         mesaj_decriptat += L"(" + substring_curent + L") ";
     }
 
-    wcout << L"\nMesajul decriptat: " << mesaj_decriptat;
-    wcout << L"\nMesajul decriptat (crud): " << mesaj_decriptat_crud;
+    wcout << L"\nMesajul decodificat: " << mesaj_decriptat;
+    wcout << L"\nMesajul decodificat (crud): " << mesaj_decriptat_crud;
     wcout << L'\n';
 }
 
@@ -622,8 +645,8 @@ main(void)
             wcout << L"\nOpțiuni disponibile: ";
             wcout << L"\n\t0. Înapoi la selectarea setului de date";
             wcout << L"\n\t1. Afișare statistici \"" << *set_de_date << L'\"';
-            wcout << L"\n\t2. Criptare text";
-            wcout << L"\n\t3. Decriptare text";
+            wcout << L"\n\t2. Codificare text";
+            wcout << L"\n\t3. Decodificare text";
             wcout << L"\nOpțiunea aleasă: ";
             wcin >> optiune_interioara;
 
